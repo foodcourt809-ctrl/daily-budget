@@ -1,5 +1,5 @@
-const CACHE_NAME = 'daily-budget-v4';
-const FILES = ['./', './index.html', './manifest.json'];
+const CACHE_NAME = 'daily-budget-v6';
+const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function(e) {
   e.waitUntil(

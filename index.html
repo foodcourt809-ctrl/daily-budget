@@ -6,6 +6,8 @@
 <title>하루가계부</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#EFEAE0">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600&display=swap');
 
@@ -56,6 +58,20 @@
   .amount-input { font-size: 18px; }
   .amount-input:focus, .text-input:focus { outline: 2px solid #2F6F4E; border-color: #2F6F4E; }
 
+  .date-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .date-input {
+    flex: 1; min-width: 0; height: 46px; font-size: 16px; font-weight: 600; padding: 0 14px;
+    border-radius: 10px; border: 1px solid #CFC5AE; background: #fff; color: #2B2A28;
+    font-family: inherit;
+  }
+  .date-input:focus { outline: 2px solid #2F6F4E; border-color: #2F6F4E; }
+  .today-btn {
+    height: 46px; padding: 0 16px; border-radius: 10px; border: 1px solid #CFC5AE;
+    background: #fff; font-size: 14px; font-weight: 600; color: #4A473F; cursor: pointer;
+  }
+  .date-row.backdated .date-input { border-color: #C98A1B; background: #FFF8E6; }
+  .backdate-hint { font-size: 12px; color: #9A6A12; margin: -4px 0 10px; display: none; }
+
   .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .btn { height: 44px; border-radius: 10px; border: 1px solid #CFC5AE; background: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
   .btn:active { transform: scale(0.98); }
@@ -68,8 +84,16 @@
   .cat-pill {
     height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid #CFC5AE;
     background: #fff; font-size: 13px; font-weight: 600; color: #4A473F; cursor: pointer;
+    display: inline-flex; align-items: center;
   }
-  .cat-pill.active { background: #2B2A28; color: #FBF9F5; border-color: #2B2A28; }
+  .cat-pill::before {
+    content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--c, #999); margin-right: 6px;
+  }
+  .cat-pill.active { background: var(--c, #2B2A28); border-color: var(--c, #2B2A28); color: #fff; }
+  .cat-pill.active::before { background: #fff; }
+
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 
   .settings-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #7A7568; margin-bottom: 18px; cursor: pointer; user-select: none; }
   .settings-row span.link { color: #2B2A28; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
@@ -85,29 +109,24 @@
   .month-nav .label { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 18px; }
 
   .cat-block { background: #FBF9F5; border: 1px solid #DCD4C2; border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
-  .cat-block .cat-title { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
   .cat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; }
   .cat-row .cat-name { color: #4A473F; }
   .cat-row .cat-amt { font-weight: 600; }
-  .cat-row .cat-amt.expense { color: #B23A2E; }
-  .cat-row .cat-amt.income { color: #2F6F4E; }
 
   .txn-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 4px; border-bottom: 1px solid #DCD4C2; }
   .txn-row:last-child { border-bottom: none; }
   .txn-date { font-size: 12px; color: #A39C89; width: 40px; flex-shrink: 0; }
   .txn-name { flex: 1; font-size: 14px; padding: 0 8px; }
   .txn-amt { font-size: 14px; font-weight: 600; white-space: nowrap; }
-  .txn-amt.expense { color: #B23A2E; }
-  .txn-amt.income { color: #2F6F4E; }
   .txn-del { font-size: 12px; color: #A39C89; margin-left: 8px; cursor: pointer; }
 
-  .empty-state { font-size: 13px; color: #A39C89; padding: 20px 4px; text-align: center; }
+  .empty-state { font-size: 13px; color: #A39C89; padding: 14px 4px; text-align: center; }
 
-  .today-txn-list { margin-top: 10px; }
+  .day-list-title { font-size: 12px; color: #7A7568; margin: 14px 0 4px; }
+  .today-txn-list { margin-top: 0; }
   .today-txn { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 6px 0; border-bottom: 1px solid #EDE7D8; }
   .today-txn .t-name { flex: 1; color: #4A473F; }
-  .today-txn .t-amt.expense { color: #B23A2E; }
-  .today-txn .t-amt.income { color: #2F6F4E; }
+  .today-txn .t-amt { font-weight: 600; }
   .today-txn .t-del { color: #A39C89; cursor: pointer; margin-left: 8px; }
 </style>
 </head>
@@ -152,7 +171,12 @@
     </div>
 
     <div class="input-card">
-      <p class="heading">오늘 기록하기</p>
+      <p class="heading">기록하기</p>
+      <div class="date-row" id="dateRow">
+        <input type="date" class="date-input" id="dateInput">
+        <button class="today-btn" id="dateToday">오늘</button>
+      </div>
+      <p class="backdate-hint" id="backdateHint">이전 날짜에 기록하는 중이에요</p>
       <input type="number" class="amount-input" id="amountInput" placeholder="금액 입력">
       <div class="cat-picker" id="categoryPicker">
         <button class="cat-pill" data-cat="교통">교통</button>
@@ -167,6 +191,7 @@
         <button class="btn btn-expense" id="addExpense">지출</button>
         <button class="btn btn-income" id="addIncome">수입</button>
       </div>
+      <div class="day-list-title" id="dayListTitle">오늘 기록</div>
       <div class="today-txn-list" id="todayTxnList"></div>
     </div>
   </div>
@@ -197,43 +222,59 @@
 <script>
 (function() {
   var DEFAULT_BUDGET = 500000;
+  var CAT_COLORS = {
+    '교통': '#3B6FB6',
+    '식비': '#C46A12',
+    '군것질': '#C2417E',
+    '취미': '#7A55C2',
+    '기타': '#6B6A63'
+  };
+  var INCOME_COLOR = '#2F6F4E';
+
   var state = null;
   var activeTab = 'today';
   var viewY, viewM;
+  var selectedKey = null;
+  var selectedCategory = null;
+
+  async function readStore() { return localStorage.getItem('budget-state'); }
+  async function writeStore(v) { localStorage.setItem('budget-state', v); }
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function dateKey(y, m, d) { return y + '-' + pad(m) + '-' + pad(d); }
+  function monthKey(y, m) { return y + '-' + pad(m); }
   function todayParts() {
     var now = new Date();
     return { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
   }
   function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
   function won(n) { n = Math.round(n); return n.toLocaleString('ko-KR') + '원'; }
-  function wonSigned(n) {
-    n = Math.round(n);
-    if (n > 0) return '+' + n.toLocaleString('ko-KR') + '원';
-    if (n < 0) return n.toLocaleString('ko-KR') + '원';
-    return '0원';
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function amtColor(type, name) {
+    if (type === 'income') return INCOME_COLOR;
+    return CAT_COLORS[name] || CAT_COLORS['기타'];
+  }
+  function dotHtml(type, name) {
+    if (type === 'income') return '';
+    return '<span class="dot" style="background:' + amtColor(type, name) + '"></span>';
   }
 
   function defaultState() {
-    var t = todayParts();
-    return {
-      monthlyBudget: DEFAULT_BUDGET,
-      entries: {},
-      pastUsedOverride: DEFAULT_BUDGET - 350000,
-      trackingStartDay: t.d
-    };
+    return { monthlyBudget: DEFAULT_BUDGET, entries: {}, monthOverrides: {} };
   }
 
   async function loadState() {
     try {
-      var raw = localStorage.getItem('budget-state');
+      var raw = await readStore();
       var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') throw new Error('empty');
       if (!parsed.monthlyBudget) parsed.monthlyBudget = DEFAULT_BUDGET;
       if (!parsed.entries) parsed.entries = {};
-      if (parsed.pastUsedOverride === undefined) parsed.pastUsedOverride = null;
-      if (parsed.trackingStartDay === undefined) parsed.trackingStartDay = null;
+      if (!parsed.monthOverrides) parsed.monthOverrides = {};
+      delete parsed.pastUsedOverride;
+      delete parsed.trackingStartDay;
       state = parsed;
     } catch (e) {
       state = defaultState();
@@ -241,7 +282,7 @@
   }
 
   async function saveState() {
-    try { localStorage.setItem('budget-state', JSON.stringify(state)); } catch (e) {}
+    try { await writeStore(JSON.stringify(state)); } catch (e) {}
   }
 
   function dayNetActual(dateStr) {
@@ -253,17 +294,20 @@
   }
   function dayNet(dateStr) { var a = dayNetActual(dateStr); return a === null ? 0 : a; }
 
+  function sumNets(y, m, fromDay, toDay) {
+    var s = 0;
+    for (var d = fromDay; d <= toDay; d++) s += dayNet(dateKey(y, m, d));
+    return s;
+  }
+
+  // dayNum 이전(1일 ~ dayNum-1일)까지 쓴 것으로 치는 금액
   function usedBeforeDay(y, m, dayNum) {
-    if (state.pastUsedOverride !== null && state.trackingStartDay) {
-      var start = state.trackingStartDay;
-      var sum = state.pastUsedOverride;
-      for (var d = start; d < dayNum; d++) sum += dayNet(dateKey(y, m, d));
-      return sum;
-    }
+    var ov = state.monthOverrides[monthKey(y, m)];
+    if (typeof ov === 'number') return ov + sumNets(y, m, 1, dayNum - 1);
     var avg = state.monthlyBudget / daysInMonth(y, m);
     var s = 0;
-    for (var d2 = 1; d2 < dayNum; d2++) {
-      var a = dayNetActual(dateKey(y, m, d2));
+    for (var d = 1; d < dayNum; d++) {
+      var a = dayNetActual(dateKey(y, m, d));
       s += a === null ? avg : a;
     }
     return s;
@@ -271,12 +315,29 @@
 
   function allowanceForDay(y, m, dayNum) {
     var dim = daysInMonth(y, m);
-    var usedBefore = usedBeforeDay(y, m, dayNum);
-    return (state.monthlyBudget - usedBefore) / (dim - dayNum + 1);
+    return (state.monthlyBudget - usedBeforeDay(y, m, dayNum)) / (dim - dayNum + 1);
   }
 
-  function totalUsedThisMonth(y, m, uptoDay) {
-    return usedBeforeDay(y, m, uptoDay) + dayNet(dateKey(y, m, uptoDay));
+  function totalUsedThroughDay(y, m, dayNum) {
+    return usedBeforeDay(y, m, dayNum) + dayNet(dateKey(y, m, dayNum));
+  }
+
+  // 지금까지의 기록 기준으로, 내일 배정될 금액
+  function tomorrowAllowance(y, m, d) {
+    var dim = daysInMonth(y, m);
+    if (d >= dim) {
+      var ny = m === 12 ? y + 1 : y;
+      var nm = m === 12 ? 1 : m + 1;
+      return state.monthlyBudget / daysInMonth(ny, nm);
+    }
+    return (state.monthlyBudget - totalUsedThroughDay(y, m, d)) / (dim - d);
+  }
+
+  function currentSelectedKey() {
+    var t = todayParts();
+    var todayKey = dateKey(t.y, t.m, t.d);
+    if (!selectedKey || !/^\d{4}-\d{2}-\d{2}$/.test(selectedKey) || selectedKey > todayKey) return todayKey;
+    return selectedKey;
   }
 
   function getMonthEntries(y, m) {
@@ -323,6 +384,8 @@
     var allowanceToday = allowanceForDay(y, m, d);
     var netToday = dayNet(todayKey);
     var leftToday = allowanceToday - netToday;
+    var tomLabel = d >= daysInMonth(y, m) ? '내일(다음 달) 예상 ' : '내일 예상 ';
+    var tomText = tomLabel + won(tomorrowAllowance(y, m, d));
 
     var heroAmount = document.getElementById('heroAmount');
     var heroSub = document.getElementById('heroSub');
@@ -333,17 +396,14 @@
       heroLabel.textContent = '오늘 초과한 금액';
       heroAmount.textContent = won(Math.abs(leftToday));
       heroAmount.classList.add('over');
-      heroSub.textContent = '오늘 배정액 ' + won(allowanceToday) + ' · 초과분은 내일부터 나눠서 줄어들어요';
     } else {
       heroLabel.textContent = '오늘 쓸 수 있는 돈';
       heroAmount.textContent = won(leftToday);
       if (netToday !== 0) heroAmount.classList.add('under');
-      var remainDays = daysInMonth(y, m) - d + 1;
-      heroSub.textContent = '오늘 배정액 ' + won(allowanceToday) + ' · 이번 달 ' + remainDays + '일 남음';
     }
+    heroSub.textContent = '오늘 배정액 ' + won(allowanceToday) + ' · ' + tomText;
 
-    var usedSoFar = totalUsedThisMonth(y, m, d);
-    var remainBalance = state.monthlyBudget - usedSoFar;
+    var remainBalance = state.monthlyBudget - totalUsedThroughDay(y, m, d);
     document.getElementById('statBudget').textContent = won(state.monthlyBudget);
     var remainEl = document.getElementById('statRemain');
     remainEl.textContent = won(remainBalance);
@@ -351,20 +411,38 @@
     remainEl.classList.add(remainBalance < 0 ? 'over' : 'under');
 
     document.getElementById('budgetInput').value = state.monthlyBudget;
-    document.getElementById('remainInput').value = Math.round(remainBalance);
+    var remainInput = document.getElementById('remainInput');
+    remainInput.value = Math.round(remainBalance);
+    remainInput.dataset.orig = String(Math.round(remainBalance));
 
-    var todayTxns = state.entries[todayKey] || [];
+    // 날짜 선택 (이전 날짜 기록)
+    var selKey = currentSelectedKey();
+    var backdated = selKey !== todayKey;
+    var dateInput = document.getElementById('dateInput');
+    dateInput.max = todayKey;
+    dateInput.value = selKey;
+    document.getElementById('dateRow').classList.toggle('backdated', backdated);
+    document.getElementById('backdateHint').style.display = backdated ? 'block' : 'none';
+    var parts = selKey.split('-');
+    document.getElementById('dayListTitle').textContent =
+      backdated ? (parseInt(parts[1], 10) + '월 ' + parseInt(parts[2], 10) + '일 기록') : '오늘 기록';
+
+    var dayTxns = state.entries[selKey] || [];
     var listEl = document.getElementById('todayTxnList');
     listEl.innerHTML = '';
-    for (var i = todayTxns.length - 1; i >= 0; i--) {
+    if (dayTxns.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">아직 기록이 없어요</div>';
+      return;
+    }
+    for (var i = dayTxns.length - 1; i >= 0; i--) {
       (function(idx) {
-        var txn = todayTxns[idx];
+        var txn = dayTxns[idx];
         var row = document.createElement('div');
         row.className = 'today-txn';
         var sign = txn.type === 'expense' ? '-' : '+';
-        var label = txn.name ? txn.name : (txn.type === 'expense' ? '지출' : '수입');
-        row.innerHTML = '<span class="t-name">' + label + '</span>' +
-          '<span><span class="t-amt ' + txn.type + '">' + sign + won(txn.amount).replace('원', '') + '원</span>' +
+        var label = txn.name ? esc(txn.name) : (txn.type === 'expense' ? '지출' : '수입');
+        row.innerHTML = '<span class="t-name">' + dotHtml(txn.type, txn.name) + label + '</span>' +
+          '<span><span class="t-amt" style="color:' + amtColor(txn.type, txn.name) + '">' + sign + won(txn.amount) + '</span>' +
           '<span class="t-del" data-idx="' + idx + '">삭제</span></span>';
         listEl.appendChild(row);
       })(i);
@@ -372,8 +450,8 @@
     listEl.querySelectorAll('.t-del').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var idx = parseInt(btn.getAttribute('data-idx'), 10);
-        todayTxns.splice(idx, 1);
-        if (todayTxns.length === 0) delete state.entries[todayKey];
+        dayTxns.splice(idx, 1);
+        if (dayTxns.length === 0) delete state.entries[selKey];
         saveState();
         render();
       });
@@ -392,48 +470,55 @@
     var expCats = categorySummary(entries, 'expense');
     var incCats = categorySummary(entries, 'income');
 
-    var expBlock = document.getElementById('expenseCatBlock');
-    expBlock.innerHTML = expCats.length ? expCats.map(function(c) {
-      return '<div class="cat-row"><span class="cat-name">' + c.name + '</span><span class="cat-amt expense">' + won(c.total) + '</span></div>';
+    document.getElementById('expenseCatBlock').innerHTML = expCats.length ? expCats.map(function(c) {
+      return '<div class="cat-row"><span class="cat-name">' + dotHtml('expense', c.name) + esc(c.name) + '</span>' +
+        '<span class="cat-amt" style="color:' + amtColor('expense', c.name) + '">' + won(c.total) + '</span></div>';
     }).join('') : '<div class="empty-state">지출 기록이 없어요</div>';
 
-    var incBlock = document.getElementById('incomeCatBlock');
-    incBlock.innerHTML = incCats.length ? incCats.map(function(c) {
-      return '<div class="cat-row"><span class="cat-name">' + c.name + '</span><span class="cat-amt income">' + won(c.total) + '</span></div>';
+    document.getElementById('incomeCatBlock').innerHTML = incCats.length ? incCats.map(function(c) {
+      return '<div class="cat-row"><span class="cat-name">' + esc(c.name) + '</span>' +
+        '<span class="cat-amt" style="color:' + INCOME_COLOR + '">' + won(c.total) + '</span></div>';
     }).join('') : '<div class="empty-state">수입 기록이 없어요</div>';
 
     var listEl = document.getElementById('monthTxnList');
     listEl.innerHTML = '';
     if (entries.length === 0) {
       listEl.innerHTML = '<div class="empty-state">이 달의 기록이 없어요</div>';
-    } else {
-      entries.forEach(function(e) {
-        var row = document.createElement('div');
-        row.className = 'txn-row';
-        var sign = e.type === 'expense' ? '-' : '+';
-        var label = e.name ? e.name : (e.type === 'expense' ? '지출' : '수입');
-        row.innerHTML =
-          '<span class="txn-date">' + viewM + '/' + e.day + '</span>' +
-          '<span class="txn-name">' + label + '</span>' +
-          '<span><span class="txn-amt ' + e.type + '">' + sign + won(e.amount).replace('원', '') + '원</span>' +
-          '<span class="txn-del" data-date="' + e.date + '" data-idx="' + e.idx + '">삭제</span></span>';
-        listEl.appendChild(row);
-      });
-      listEl.querySelectorAll('.txn-del').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var dt = btn.getAttribute('data-date');
-          var idx = parseInt(btn.getAttribute('data-idx'), 10);
-          state.entries[dt].splice(idx, 1);
-          if (state.entries[dt].length === 0) delete state.entries[dt];
-          saveState();
-          render();
-        });
-      });
+      return;
     }
+    entries.forEach(function(e) {
+      var row = document.createElement('div');
+      row.className = 'txn-row';
+      var sign = e.type === 'expense' ? '-' : '+';
+      var label = e.name ? esc(e.name) : (e.type === 'expense' ? '지출' : '수입');
+      row.innerHTML =
+        '<span class="txn-date">' + viewM + '/' + e.day + '</span>' +
+        '<span class="txn-name">' + dotHtml(e.type, e.name) + label + '</span>' +
+        '<span><span class="txn-amt" style="color:' + amtColor(e.type, e.name) + '">' + sign + won(e.amount) + '</span>' +
+        '<span class="txn-del" data-date="' + e.date + '" data-idx="' + e.idx + '">삭제</span></span>';
+      listEl.appendChild(row);
+    });
+    listEl.querySelectorAll('.txn-del').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var dt = btn.getAttribute('data-date');
+        var idx = parseInt(btn.getAttribute('data-idx'), 10);
+        state.entries[dt].splice(idx, 1);
+        if (state.entries[dt].length === 0) delete state.entries[dt];
+        saveState();
+        render();
+      });
+    });
   }
 
   function render() {
     if (activeTab === 'today') renderToday(); else renderMonthly();
+  }
+
+  function resetCategoryPicker() {
+    selectedCategory = null;
+    document.querySelectorAll('.cat-pill').forEach(function(b) { b.classList.remove('active'); });
+    document.getElementById('customNameInput').style.display = 'none';
+    document.getElementById('customNameInput').value = '';
   }
 
   function addTxn(type) {
@@ -442,8 +527,7 @@
     var val = parseFloat(input.value);
     if (!val || val <= 0) { errorEl.style.display = 'block'; return; }
     errorEl.style.display = 'none';
-    var t = todayParts();
-    var key = dateKey(t.y, t.m, t.d);
+    var key = currentSelectedKey();
     var name = '';
     if (selectedCategory === '기타') {
       name = document.getElementById('customNameInput').value.trim();
@@ -464,6 +548,15 @@
   document.getElementById('addExpense').addEventListener('click', function() { addTxn('expense'); });
   document.getElementById('addIncome').addEventListener('click', function() { addTxn('income'); });
 
+  document.getElementById('dateInput').addEventListener('change', function() {
+    selectedKey = this.value || null;
+    render();
+  });
+  document.getElementById('dateToday').addEventListener('click', function() {
+    selectedKey = null;
+    render();
+  });
+
   document.getElementById('settingsToggle').addEventListener('click', function() {
     document.getElementById('settingsPanel').classList.toggle('open');
   });
@@ -474,11 +567,11 @@
   document.getElementById('budgetSave').addEventListener('click', function() {
     var v = parseFloat(document.getElementById('budgetInput').value);
     if (v && v > 0) state.monthlyBudget = v;
-    var r = document.getElementById('remainInput').value;
-    if (r !== '' && !isNaN(parseFloat(r))) {
+    var remainEl = document.getElementById('remainInput');
+    var r = remainEl.value;
+    if (r !== '' && r !== remainEl.dataset.orig && !isNaN(parseFloat(r))) {
       var t = todayParts();
-      state.pastUsedOverride = state.monthlyBudget - parseFloat(r);
-      state.trackingStartDay = t.d;
+      state.monthOverrides[monthKey(t.y, t.m)] = state.monthlyBudget - parseFloat(r) - sumNets(t.y, t.m, 1, t.d);
     }
     saveState();
     document.getElementById('settingsPanel').classList.remove('open');
@@ -498,13 +591,10 @@
     render();
   });
 
-  var t0 = todayParts();
-  viewY = t0.y; viewM = t0.m;
-  var selectedCategory = null;
-
   document.querySelectorAll('.cat-pill').forEach(function(btn) {
+    var cat = btn.getAttribute('data-cat');
+    btn.style.setProperty('--c', CAT_COLORS[cat]);
     btn.addEventListener('click', function() {
-      var cat = btn.getAttribute('data-cat');
       selectedCategory = cat;
       document.querySelectorAll('.cat-pill').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
@@ -513,15 +603,10 @@
     });
   });
 
-  function resetCategoryPicker() {
-    selectedCategory = null;
-    document.querySelectorAll('.cat-pill').forEach(function(b) { b.classList.remove('active'); });
-    document.getElementById('customNameInput').style.display = 'none';
-    document.getElementById('customNameInput').value = '';
-  }
+  var t0 = todayParts();
+  viewY = t0.y; viewM = t0.m;
 
   loadState().then(render);
-
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function() {});
   }

@@ -365,7 +365,9 @@
     getRedirectResult, 
     GoogleAuthProvider, 
     onAuthStateChanged, 
-    signOut 
+    signOut,
+    setPersistence,
+    browserLocalPersistence
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -385,6 +387,11 @@
     auth = getAuth(app);
     db = getFirestore(app);
     provider = new GoogleAuthProvider();
+    
+    // 모바일 브라우저 환경에서 로그인 세션이 유지되도록 명시적 설정
+    setPersistence(auth, browserLocalPersistence).catch((err) => {
+      console.warn("Persistence setting warn:", err);
+    });
   } catch(e) {
     console.error("Firebase 초기화 실패:", e);
   }
@@ -514,11 +521,17 @@
     }
   });
 
-  // 모바일 리다이렉트 로그인 결과 처리
+  // 모바일 리다이렉트 로그인 결과 처리 및 상태 감지
   if (auth) {
-    getRedirectResult(auth).then((result) => {
+    getRedirectResult(auth).then(async (result) => {
       if (result && result.user) {
-        console.log("리다이렉트 로그인 성공:", result.user);
+        currentUser = result.user;
+        userInfoEl.textContent = (currentUser.displayName || '사용자') + '님';
+        userInfoEl.style.display = 'inline';
+        loginBtnEl.textContent = '로그아웃';
+        loginBtnEl.classList.add('logged-in');
+        await loadState();
+        render();
       }
     }).catch((error) => {
       console.error("리다이렉트 로그인 에러:", error);

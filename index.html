@@ -356,7 +356,6 @@
   </div>
 </div>
 
-<!-- 파이어베이스 연동 스크립트 모듈 -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { 
@@ -419,7 +418,7 @@
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   }
 
-  // 데이터 불러오기 (클라우드 우선, 비로그인 시 localStroage)
+  // 데이터 불러오기 (클라우드 우선, 비로그인 시 localStorage)
   async function loadState() {
     try {
       let parsed = null;
@@ -1205,9 +1204,3 @@
 
 </body>
 </html>
-```
-
-### 📌 적용 방법:
-1. GitHub 레포지토리의 `index.html` 연필 아이콘(**Edit this file**)을 누릅니다.
-2. 기존 코드를 전체 지우고 위의 **새 코드**를 그대로 복사하여 붙여넣습니다.
-3. **[Commit changes...]** 버튼을 누른 뒤 1~2분 후 폰에서 다시 구글 로그인을 시도해 보세요!

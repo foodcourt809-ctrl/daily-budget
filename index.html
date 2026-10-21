@@ -23,21 +23,9 @@
 
   .wrap { max-width: 420px; margin: 0 auto; padding: 24px 16px 40px; }
 
-  .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .top-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
   .app-title { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; }
   .month-label { font-size: 13px; color: #7A7568; }
-
-  /* 로그인 영역 스타일 */
-  .auth-area { text-align: right; }
-  #userInfo { font-size: 13px; color: #2F6F4E; font-weight: 600; margin-right: 6px; display: none; }
-  #loginBtn { 
-    font-size: 12px; padding: 6px 12px; border-radius: 8px; border: 1px solid #DCD4C2; 
-    background: #fff; cursor: pointer; color: #4A473F; font-weight: 600; font-family: inherit;
-    transition: all 0.2s ease;
-  }
-  #loginBtn.logged-in {
-    background: #E8E3D5; color: #B23A2E; border-color: #E3B7AF;
-  }
 
   .tab-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
   .tab-btn {
@@ -114,6 +102,9 @@
   .txn-edit { font-size: 12px; color: #7A7568; margin-left: 10px; cursor: pointer; }
   .today-txn .t-edit { color: #7A7568; cursor: pointer; margin-left: 10px; }
 
+  .account-row { margin-bottom: 18px; }
+  .account-row .settings-row { margin-bottom: 4px; }
+
   .rec-tag { font-size: 10px; color: #7A7568; border: 1px solid #DCD4C2; border-radius: 6px; padding: 1px 5px; margin-left: 6px; }
   .link-sm { font-size: 12px; color: #7A7568; text-decoration: underline; margin-left: 8px; cursor: pointer; font-weight: 500; }
 
@@ -183,6 +174,17 @@
   .today-txn .t-name { flex: 1; color: #4A473F; }
   .today-txn .t-amt { font-weight: 600; }
   .today-txn .t-del { color: #A39C89; cursor: pointer; margin-left: 8px; }
+
+  .top-row { align-items: flex-start; }
+  .auth-area { text-align: right; }
+  #userInfo { font-size: 13px; color: #2F6F4E; font-weight: 600; margin-right: 6px; display: none; }
+  #loginBtn {
+    font-size: 12px; padding: 6px 12px; border-radius: 8px; border: 1px solid #DCD4C2;
+    background: #fff; cursor: pointer; color: #4A473F; font-weight: 600; font-family: inherit;
+  }
+  #loginBtn.logged-in { background: #E8E3D5; color: #B23A2E; border-color: #E3B7AF; }
+  .auth-msg { font-size: 12px; color: #7A7568; background: #FBF9F5; border: 1px solid #DCD4C2; border-radius: 10px; padding: 8px 12px; margin: 0 0 12px; line-height: 1.5; }
+  .auth-msg.err { color: #B23A2E; border-color: #E3B7AF; background: #FDF2F0; }
 </style>
 </head>
 <body>
@@ -190,13 +192,14 @@
 <div class="wrap" id="app">
   <div class="top-row">
     <div class="app-title">하루가계부</div>
-    <!-- 로그인/로그아웃 표시 영역 -->
     <div class="auth-area">
       <span id="userInfo"></span>
       <button id="loginBtn">구글 로그인</button>
       <div class="month-label" id="todayLabel" style="margin-top: 4px;"></div>
     </div>
   </div>
+  <p class="auth-msg" id="authMsg" style="display:none;"></p>
+  <div id="gisBox" style="display:none; margin-bottom: 12px;"><div id="gisBtn"></div></div>
 
   <div class="tab-bar">
     <button class="tab-btn active" id="tabToday">오늘</button>
@@ -214,6 +217,11 @@
     <div class="stat-grid">
       <div class="stat-box"><p class="label">이번 달 예산</p><p class="value" id="statBudget">-</p></div>
       <div class="stat-box"><p class="label">남은 잔액</p><p class="value" id="statRemain">-</p></div>
+    </div>
+
+    <div class="account-row" id="accountRow" style="display:none;">
+      <div class="settings-row" id="accountToggle"><span>구글 계정 동기화</span><span class="link" id="accountLink"></span></div>
+      <p class="preset-hint" id="accountStatus"></p>
     </div>
 
     <div class="settings-row" id="settingsToggle">
@@ -295,6 +303,17 @@
       <p class="preset-hint" style="margin-top:10px;">정해진 날이 되면 앱을 열 때 자동으로 기록돼요. 31일로 정하면 30일까지 있는 달엔 말일에 기록돼요. 등록한 날 이전 날짜는 기록하지 않아요.</p>
     </div>
     <div id="recList"></div>
+
+    <div class="section-title">기록 백업 / 복원</div>
+    <div class="input-card">
+      <p class="preset-hint" style="margin-bottom:10px;">기록 전체를 코드로 복사해 두거나, 다른 곳에서 복사한 코드로 복원할 수 있어요.</p>
+      <textarea class="text-input" id="backupArea" rows="4" style="height:auto; padding:10px 14px; font-size:12px; font-weight:400;" placeholder="여기에 백업 코드를 붙여넣고 복원하세요"></textarea>
+      <div class="btn-row">
+        <button class="btn" id="backupMake">백업 코드 만들기</button>
+        <button class="btn btn-income" id="backupRestore">코드로 복원</button>
+      </div>
+      <p class="preset-hint" id="backupMsg" style="margin-top:10px;"></p>
+    </div>
   </div>
 
   <div id="monthlyView" style="display:none;">
@@ -357,49 +376,41 @@
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { 
-    getAuth, 
-    signInWithPopup, 
-    signInWithRedirect, 
-    getRedirectResult, 
-    GoogleAuthProvider, 
-    onAuthStateChanged, 
-    signOut,
-    setPersistence,
-    browserLocalPersistence
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult,
+  GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // 사용자의 Firebase 프로젝트 설정 정보 (사용자 제공 키 적용 완료)
-  const firebaseConfig = {
-    apiKey: "AIzaSyCLI9oUAwVS7G-4axBBB_05WAQeuZjvNwM",
-    authDomain: "harubudget.firebaseapp.com",
-    projectId: "harubudget",
-    storageBucket: "harubudget.firebasestorage.app",
-    messagingSenderId: "161358275168",
-    appId: "1:161358275168:web:2fba7caa5fbcf8d648d905"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyCLI9oUAwVS7G-4axBBB_05WAQeuZjvNwM",
+  authDomain: "harubudget.firebaseapp.com",
+  projectId: "harubudget",
+  storageBucket: "harubudget.firebasestorage.app",
+  messagingSenderId: "161358275168",
+  appId: "1:161358275168:web:2fba7caa5fbcf8d648d905"
+};
 
-  let app, auth, db, provider;
-  try {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    
-    // 삼성 인터넷 및 모바일 브라우저 세션 보존용 LOCAL 지속성 설정
-    setPersistence(auth, browserLocalPersistence).catch((err) => {
-      console.warn("Persistence setting warn:", err);
-    });
-  } catch(e) {
-    console.error("Firebase 초기화 실패:", e);
-  }
+let auth = null, db = null, provider = null;
+try {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  setPersistence(auth, browserLocalPersistence).catch(function(err) { console.warn('persistence', err); });
+} catch (e) {
+  console.error('Firebase 초기화 실패:', e);
+}
 
-  let currentUser = null;
+;(function() {
   var DEFAULT_BUDGET = 500000;
-  var CAT_COLORS = { '교통': '#3B6FB6', '식비': '#C46A12', '기타': '#6B6A63' };
+  var CAT_COLORS = {
+    '교통': '#3B6FB6',
+    '식비': '#C46A12',
+    '기타': '#6B6A63'
+  };
   var INCOME_COLOR = '#2F6F4E';
 
   var state = null;
@@ -414,147 +425,59 @@
   var editCatVal = '';
   var editingRecId = null;
   var recTypeVal = 'expense';
+  var hasBridge = !!window.AndroidBridge;
+  var authInfo = { available: false, signedIn: false, email: '' };
+  var syncText = '';
+  var restoreArmed = false;
+  var restoreTimer = null;
   var presetCategory = '';
   var editingPresetId = null;
 
-  function defaultState() {
-    return { monthlyBudget: DEFAULT_BUDGET, entries: {}, monthOverrides: {}, presets: [], recurring: [] };
-  }
+  var currentUser = null;
+  var cloudReady = false;
 
-  // 삼성 인터넷 브라우저 또는 인앱 브라우저 여부 감지
-  function isSamsungInternetOrInApp() {
-    var ua = navigator.userAgent;
-    return /SamsungBrowser/i.test(ua) || /KAKAOTALK|NAVER|FBAN|FBAV/i.test(ua);
-  }
+  function parseSafe(text) { try { return JSON.parse(text); } catch (e) { return null; } }
 
-  // 데이터 불러오기 (클라우드 데이터 우선, 비로그인 시 localStorage 사용)
-  async function loadState() {
+  // 읽기: 로그인 상태면 클라우드 기록과 이 기기 기록 중 더 최근 것을 사용
+  async function readStore() {
+    var localRaw = localStorage.getItem('budget-state');
+    if (!(currentUser && db)) { cloudReady = false; return localRaw; }
     try {
-      let parsed = null;
-      if (currentUser && db) {
-        const docSnap = await getDoc(doc(db, 'users', currentUser.uid));
-        if (docSnap.exists()) {
-          parsed = docSnap.data();
-        } else {
-          // 구글 로그인 성공 시 기존 로컬 데이터가 있다면 클라우드로 동기화
-          let localRaw = localStorage.getItem('budget-state');
-          if (localRaw) parsed = JSON.parse(localRaw);
+      var ref = doc(db, 'users', currentUser.uid);
+      var snap = await getDoc(ref);
+      cloudReady = true;
+      var local = parseSafe(localRaw);
+      if (snap.exists()) {
+        var cloud = snap.data();
+        if (local && (local.updatedAt || 0) > (cloud.updatedAt || 0)) {
+          setDoc(ref, local).catch(function() {});
+          return localRaw;
         }
-      } else {
-        let raw = localStorage.getItem('budget-state');
-        if (raw) parsed = JSON.parse(raw);
+        var cloudRaw = JSON.stringify(cloud);
+        localStorage.setItem('budget-state', cloudRaw);
+        return cloudRaw;
       }
-
-      if (!parsed || typeof parsed !== 'object') throw new Error('empty');
-      if (!parsed.monthlyBudget) parsed.monthlyBudget = DEFAULT_BUDGET;
-      if (!parsed.entries) parsed.entries = {};
-      if (!parsed.monthOverrides) parsed.monthOverrides = {};
-      if (!Array.isArray(parsed.presets)) parsed.presets = [];
-      if (!Array.isArray(parsed.recurring)) parsed.recurring = [];
-      state = parsed;
-      
-      if (currentUser && db) saveState(); 
+      if (local) { setDoc(ref, local).catch(function() {}); return localRaw; }
+      return null;
     } catch (e) {
-      state = defaultState();
+      cloudReady = false;
+      showAuthMsg('클라우드에서 기록을 불러오지 못했어요 (' + (e.code || e.message) + '). 이 기기에 저장된 기록을 보여드려요.', true);
+      return localRaw;
     }
   }
 
-  // 데이터 저장하기 (클라우드 및 로컬 동시 저장)
-  async function saveState() {
-    try {
-      const stateStr = JSON.stringify(state);
-      localStorage.setItem('budget-state', stateStr); 
-      if (currentUser && db) {
-        await setDoc(doc(db, 'users', currentUser.uid), state); 
+  // 쓰기: 이 기기에 먼저 저장하고, 클라우드 읽기에 성공한 상태에서만 클라우드에도 저장
+  async function writeStore(v) {
+    localStorage.setItem('budget-state', v);
+    if (currentUser && db && cloudReady) {
+      try {
+        await setDoc(doc(db, 'users', currentUser.uid), JSON.parse(v));
+      } catch (e) {
+        showAuthMsg('클라우드 저장에 실패했어요 (' + (e.code || e.message) + '). 이 기기에는 저장됐어요.', true);
       }
-    } catch (e) { console.error("데이터 저장 실패:", e); }
+    }
   }
 
-  // 구글 로그인 및 로그아웃 처리 (삼성 인터넷 브라우저 호환성 강화)
-  const loginBtnEl = document.getElementById('loginBtn');
-  const userInfoEl = document.getElementById('userInfo');
-
-  loginBtnEl.addEventListener('click', async () => {
-    if (!auth) {
-      alert("Firebase 설정을 다시 확인해주세요.");
-      return;
-    }
-    
-    // 이미 로그인된 상태일 경우 로그아웃 처리
-    if (currentUser) {
-      if (confirm("로그아웃 하시겠습니까?")) {
-        try {
-          await signOut(auth);
-          currentUser = null;
-          alert("로그아웃 되었습니다.");
-          await loadState();
-          render();
-        } catch(e) {
-          alert("로그아웃 실패: " + e.message);
-        }
-      }
-      return;
-    }
-
-    // 미로그인 상태 시 로그인 시도 (삼성 인터넷 및 모바일 크롬 완벽 대응)
-    try {
-      if (isSamsungInternetOrInApp()) {
-        // 삼성 인터넷 및 인앱 브라우저는 리다이렉트 방식을 사용하여 세션 누실 방지
-        await signInWithRedirect(auth, provider);
-      } else {
-        try {
-          await signInWithPopup(auth, provider);
-        } catch(popErr) {
-          console.warn("Popup blocked or failed, fallback to redirect:", popErr);
-          await signInWithRedirect(auth, provider);
-        }
-      }
-    } catch(error) {
-      console.error("로그인 에러:", error);
-      if (error.code === 'auth/unauthorized-domain') {
-        alert("Firebase Auth '승인된 도메인' 설정에 현재 깃허브 주소가 추가되어 있는지 확인하세요.");
-      } else {
-        alert("로그인 중 오류가 발생했습니다: " + error.message);
-      }
-    }
-  });
-
-  // 모바일 리다이렉트 로그인 결과 가로채기 및 로그인 상태 자동 감지
-  if (auth) {
-    getRedirectResult(auth).then(async (result) => {
-      if (result && result.user) {
-        currentUser = result.user;
-        userInfoEl.textContent = (currentUser.displayName || '사용자') + '님';
-        userInfoEl.style.display = 'inline';
-        loginBtnEl.textContent = '로그아웃';
-        loginBtnEl.classList.add('logged-in');
-        await loadState();
-        render();
-      }
-    }).catch((error) => {
-      console.error("리다이렉트 로그인 결과 처리 실패:", error);
-    });
-
-    // 인증 상태 실시간 리스너
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUser = user;
-        userInfoEl.textContent = (user.displayName || '사용자') + '님';
-        userInfoEl.style.display = 'inline';
-        loginBtnEl.textContent = '로그아웃';
-        loginBtnEl.classList.add('logged-in');
-      } else {
-        currentUser = null;
-        userInfoEl.style.display = 'none';
-        loginBtnEl.textContent = '구글 로그인';
-        loginBtnEl.classList.remove('logged-in');
-      }
-      await loadState();
-      render();
-    });
-  }
-
-  /* ---------------- 아래 가계부 기본 로직 ---------------- */
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function dateKey(y, m, d) { return y + '-' + pad(m) + '-' + pad(d); }
   function monthKey(y, m) { return y + '-' + pad(m); }
@@ -564,7 +487,9 @@
   }
   function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
   function won(n) { n = Math.round(n); return n.toLocaleString('ko-KR') + '원'; }
-  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
   function amtColor(type, name, cat) {
     if (type === 'income') return INCOME_COLOR;
     return CAT_COLORS[cat] || CAT_COLORS[name] || CAT_COLORS['기타'];
@@ -573,6 +498,39 @@
     if (type === 'income') return '';
     return '<span class="dot" style="background:' + amtColor(type, name, cat) + '"></span>';
   }
+
+  function defaultState() {
+    return { monthlyBudget: DEFAULT_BUDGET, entries: {}, monthOverrides: {}, presets: [], recurring: [] };
+  }
+
+  function normalizeState(parsed) {
+    if (!parsed || typeof parsed !== 'object') throw new Error('empty');
+    if (!parsed.monthlyBudget) parsed.monthlyBudget = DEFAULT_BUDGET;
+    if (!parsed.entries) parsed.entries = {};
+    if (!parsed.monthOverrides) parsed.monthOverrides = {};
+    if (!Array.isArray(parsed.presets)) parsed.presets = [];
+    if (!Array.isArray(parsed.recurring)) parsed.recurring = [];
+    delete parsed.pastUsedOverride;
+    delete parsed.trackingStartDay;
+    return parsed;
+  }
+
+  async function loadState() {
+    try {
+      var raw = await readStore();
+      state = normalizeState(JSON.parse(raw));
+    } catch (e) {
+      state = defaultState();
+    }
+  }
+
+  async function saveState() {
+    try {
+      state.updatedAt = Date.now();
+      await writeStore(JSON.stringify(state));
+    } catch (e) {}
+  }
+
   function dayNetActual(dateStr) {
     var txns = state.entries[dateStr];
     if (!txns || !txns.length) return null;
@@ -581,11 +539,14 @@
     return net;
   }
   function dayNet(dateStr) { var a = dayNetActual(dateStr); return a === null ? 0 : a; }
+
   function sumNets(y, m, fromDay, toDay) {
     var s = 0;
     for (var d = fromDay; d <= toDay; d++) s += dayNet(dateKey(y, m, d));
     return s;
   }
+
+  // dayNum 이전(1일 ~ dayNum-1일)까지 쓴 것으로 치는 금액
   function usedBeforeDay(y, m, dayNum) {
     var ov = state.monthOverrides[monthKey(y, m)];
     if (typeof ov === 'number') return ov + sumNets(y, m, 1, dayNum - 1);
@@ -597,13 +558,17 @@
     }
     return s;
   }
+
   function allowanceForDay(y, m, dayNum) {
     var dim = daysInMonth(y, m);
     return (state.monthlyBudget - usedBeforeDay(y, m, dayNum)) / (dim - dayNum + 1);
   }
+
   function totalUsedThroughDay(y, m, dayNum) {
     return usedBeforeDay(y, m, dayNum) + dayNet(dateKey(y, m, dayNum));
   }
+
+  // 지금까지의 기록 기준으로, 내일 배정될 금액
   function tomorrowAllowance(y, m, d) {
     var dim = daysInMonth(y, m);
     if (d >= dim) {
@@ -613,12 +578,14 @@
     }
     return (state.monthlyBudget - totalUsedThroughDay(y, m, d)) / (dim - d);
   }
+
   function currentSelectedKey() {
     var t = todayParts();
     var todayKey = dateKey(t.y, t.m, t.d);
     if (!selectedKey || !/^\d{4}-\d{2}-\d{2}$/.test(selectedKey) || selectedKey > todayKey) return todayKey;
     return selectedKey;
   }
+
   function getMonthEntries(y, m) {
     var prefix = y + '-' + pad(m) + '-';
     var result = [];
@@ -633,6 +600,7 @@
     result.sort(function(a, b) { return b.date === a.date ? 0 : (a.date < b.date ? 1 : -1); });
     return result;
   }
+
   function categorySummary(monthEntries, type) {
     var map = {};
     monthEntries.forEach(function(e) {
@@ -669,7 +637,7 @@
     var allowanceToday = allowanceForDay(y, m, d);
     var netToday = dayNet(todayKey);
     var leftToday = allowanceToday - netToday;
-    var tomLabel = d >= daysInMonth(y, m) ? '내일 예상 ' : '내일 예상 ';
+    var tomLabel = d >= daysInMonth(y, m) ? '내일(다음 달) 예상 ' : '내일 예상 ';
     var tomText = tomLabel + won(tomorrowAllowance(y, m, d));
 
     var heroAmount = document.getElementById('heroAmount');
@@ -700,6 +668,7 @@
     remainInput.value = Math.round(remainBalance);
     remainInput.dataset.orig = String(Math.round(remainBalance));
 
+    // 날짜 선택 (이전 날짜 기록)
     var selKey = currentSelectedKey();
     var backdated = selKey !== todayKey;
     var dateInput = document.getElementById('dateInput');
@@ -732,19 +701,23 @@
       })(i);
     }
     listEl.querySelectorAll('.t-edit').forEach(function(btn) {
-      btn.addEventListener('click', function() { openEdit(selKey, parseInt(btn.getAttribute('data-idx'), 10)); });
+      btn.addEventListener('click', function() {
+        openEdit(selKey, parseInt(btn.getAttribute('data-idx'), 10));
+      });
     });
     listEl.querySelectorAll('.t-del').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var idx = parseInt(btn.getAttribute('data-idx'), 10);
         dayTxns.splice(idx, 1);
         if (dayTxns.length === 0) delete state.entries[selKey];
-        saveState(); render();
+        saveState();
+        render();
       });
     });
   }
 
   function recTag(e) { return e.rec ? '<span class="rec-tag">반복</span>' : ''; }
+
   function shortWon(n) {
     n = Math.round(n);
     if (n >= 10000) return (Math.round(n / 1000) / 10) + '만';
@@ -752,6 +725,7 @@
     return String(n);
   }
 
+  // 반복 항목: 정해진 날이 지났는데 아직 기록 안 된 달이 있으면 자동으로 기록
   function applyRecurring() {
     var t = todayParts();
     var todayK = dateKey(t.y, t.m, t.d);
@@ -871,7 +845,8 @@
     if (monthDayFilter) {
       titleEl.innerHTML = viewM + '월 ' + monthDayFilter + '일 내역 <span class="link-sm" id="clearDayFilter">전체 보기</span>';
       document.getElementById('clearDayFilter').addEventListener('click', function() {
-        monthDayFilter = null; renderMonthly();
+        monthDayFilter = null;
+        renderMonthly();
       });
     } else {
       titleEl.textContent = '전체 내역';
@@ -897,7 +872,9 @@
       listEl.appendChild(row);
     });
     listEl.querySelectorAll('.txn-edit').forEach(function(btn) {
-      btn.addEventListener('click', function() { openEdit(btn.getAttribute('data-date'), parseInt(btn.getAttribute('data-idx'), 10)); });
+      btn.addEventListener('click', function() {
+        openEdit(btn.getAttribute('data-date'), parseInt(btn.getAttribute('data-idx'), 10));
+      });
     });
     listEl.querySelectorAll('.txn-del').forEach(function(btn) {
       btn.addEventListener('click', function() {
@@ -905,11 +882,13 @@
         var idx = parseInt(btn.getAttribute('data-idx'), 10);
         state.entries[dt].splice(idx, 1);
         if (state.entries[dt].length === 0) delete state.entries[dt];
-        saveState(); render();
+        saveState();
+        render();
       });
     });
   }
 
+  // ---- 기록 수정 ----
   function refreshEditUI() {
     document.getElementById('editTypeExpense').classList.toggle('active', editTypeVal === 'expense');
     document.getElementById('editTypeIncome').classList.toggle('active', editTypeVal === 'income');
@@ -963,22 +942,28 @@
       if (!state.entries[nk]) state.entries[nk] = [];
       state.entries[nk].push(ne);
     }
-    closeEdit(); saveState(); render();
+    closeEdit();
+    saveState();
+    render();
   }
 
+  // ---- 반복 항목 ----
   function findRec(id) {
     for (var i = 0; i < state.recurring.length; i++) {
       if (state.recurring[i].id === id) return state.recurring[i];
     }
     return null;
   }
+
   function clearRecForm() {
-    editingRecId = null; recTypeVal = 'expense';
+    editingRecId = null;
+    recTypeVal = 'expense';
     document.getElementById('recName').value = '';
     document.getElementById('recAmount').value = '';
     document.getElementById('recDay').value = '';
     document.getElementById('recError').style.display = 'none';
   }
+
   function renderRecurring() {
     var editingRule = editingRecId ? findRec(editingRecId) : null;
     document.getElementById('recFormTitle').textContent = editingRule ? '반복 항목 수정' : '반복 항목 추가';
@@ -988,16 +973,20 @@
     var listEl = document.getElementById('recList');
     listEl.innerHTML = '';
     if (state.recurring.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">등록된 반복 항목이 없어요</div>'; return;
+      listEl.innerHTML = '<div class="empty-state">등록된 반복 항목이 없어요</div>';
+      return;
     }
     state.recurring.forEach(function(r) {
-      var row = document.createElement('div'); row.className = 'txn-row';
-      row.innerHTML = '<span class="txn-date" style="width:64px">매월 ' + r.day + '일</span>' +
+      var row = document.createElement('div');
+      row.className = 'txn-row';
+      row.innerHTML =
+        '<span class="txn-date" style="width:64px">매월 ' + r.day + '일</span>' +
         '<span class="txn-name">' + esc(r.name) + '</span>' +
         '<span><span class="txn-amt" style="color:' + amtColor(r.type, r.name) + '">' + (r.type === 'expense' ? '-' : '+') + won(r.amount) + '</span>' +
         '<span class="txn-edit">수정</span><span class="txn-del">삭제</span></span>';
       row.querySelector('.txn-edit').addEventListener('click', function() {
-        editingRecId = r.id; recTypeVal = r.type;
+        editingRecId = r.id;
+        recTypeVal = r.type;
         document.getElementById('recName').value = r.name;
         document.getElementById('recAmount').value = r.amount;
         document.getElementById('recDay').value = r.day;
@@ -1008,7 +997,8 @@
       row.querySelector('.txn-del').addEventListener('click', function() {
         state.recurring = state.recurring.filter(function(x) { return x.id !== r.id; });
         if (editingRecId === r.id) clearRecForm();
-        saveState(); render();
+        saveState();
+        render();
       });
       listEl.appendChild(row);
     });
@@ -1020,11 +1010,14 @@
     }
     return null;
   }
+
   function renderPresetChips() {
-    var el = document.getElementById('presetChips'); el.innerHTML = '';
+    var el = document.getElementById('presetChips');
+    el.innerHTML = '';
     if (selectedPresetId && !findPreset(selectedPresetId)) selectedPresetId = null;
     if (state.presets.length === 0) {
-      el.innerHTML = '<p class="preset-hint">항목 탭에서 자주 쓰는 항목을 등록하면 여기서 바로 고를 수 있어요</p>'; return;
+      el.innerHTML = '<p class="preset-hint">항목 탭에서 자주 쓰는 항목을 등록하면 여기서 바로 고를 수 있어요</p>';
+      return;
     }
     state.presets.forEach(function(p) {
       var b = document.createElement('button');
@@ -1035,21 +1028,31 @@
       el.appendChild(b);
     });
   }
+
   function selectPreset(id) {
     var amountInput = document.getElementById('amountInput');
-    if (selectedPresetId === id) { selectedPresetId = null; amountInput.value = ''; } 
-    else {
-      var p = findPreset(id); if (!p) return;
-      selectedPresetId = id; amountInput.value = p.price; resetCategoryPicker();
+    if (selectedPresetId === id) {
+      selectedPresetId = null;
+      amountInput.value = '';
+    } else {
+      var p = findPreset(id);
+      if (!p) return;
+      selectedPresetId = id;
+      amountInput.value = p.price;
+      resetCategoryPicker();
     }
-    document.getElementById('inputError').style.display = 'none'; renderPresetChips();
+    document.getElementById('inputError').style.display = 'none';
+    renderPresetChips();
   }
+
   function clearPresetForm() {
-    editingPresetId = null; presetCategory = '';
+    editingPresetId = null;
+    presetCategory = '';
     document.getElementById('presetName').value = '';
     document.getElementById('presetPrice').value = '';
     document.getElementById('presetError').style.display = 'none';
   }
+
   function renderItems() {
     renderRecurring();
     var editing = editingPresetId ? findPreset(editingPresetId) : null;
@@ -1058,25 +1061,34 @@
     document.querySelectorAll('#presetCatPicker .cat-pill').forEach(function(b) {
       b.classList.toggle('active', b.getAttribute('data-cat') === presetCategory);
     });
-    var listEl = document.getElementById('presetList'); listEl.innerHTML = '';
-    if (state.presets.length === 0) { listEl.innerHTML = '<div class="empty-state">등록된 항목이 없어요</div>'; return; }
+    var listEl = document.getElementById('presetList');
+    listEl.innerHTML = '';
+    if (state.presets.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">등록된 항목이 없어요</div>';
+      return;
+    }
     state.presets.forEach(function(p) {
-      var row = document.createElement('div'); row.className = 'txn-row';
-      row.innerHTML = '<span class="txn-name" style="padding-left:0">' + dotHtml('expense', p.name, p.category) + esc(p.name) + '</span>' +
+      var row = document.createElement('div');
+      row.className = 'txn-row';
+      row.innerHTML =
+        '<span class="txn-name" style="padding-left:0">' + dotHtml('expense', p.name, p.category) + esc(p.name) + '</span>' +
         '<span><span class="txn-amt" style="color:#2B2A28">' + won(p.price) + '</span>' +
         '<span class="txn-edit">수정</span><span class="txn-del">삭제</span></span>';
       row.querySelector('.txn-edit').addEventListener('click', function() {
-        editingPresetId = p.id; presetCategory = p.category || '';
+        editingPresetId = p.id;
+        presetCategory = p.category || '';
         document.getElementById('presetName').value = p.name;
         document.getElementById('presetPrice').value = p.price;
         document.getElementById('presetError').style.display = 'none';
-        renderItems(); if (window.scrollTo) window.scrollTo(0, 0);
+        renderItems();
+        if (window.scrollTo) window.scrollTo(0, 0);
       });
       row.querySelector('.txn-del').addEventListener('click', function() {
         state.presets = state.presets.filter(function(x) { return x.id !== p.id; });
         if (selectedPresetId === p.id) selectedPresetId = null;
         if (editingPresetId === p.id) clearPresetForm();
-        saveState(); render();
+        saveState();
+        render();
       });
       listEl.appendChild(row);
     });
@@ -1106,7 +1118,8 @@
     var name = '', cat = '';
     var preset = selectedPresetId ? findPreset(selectedPresetId) : null;
     if (preset) {
-      name = preset.name; cat = preset.category || '';
+      name = preset.name;
+      cat = preset.category || '';
     } else if (selectedCategory === '기타') {
       name = document.getElementById('customNameInput').value.trim();
     } else if (selectedCategory) {
@@ -1116,17 +1129,35 @@
     var entry = { type: type, amount: val, name: name };
     if (cat) entry.cat = cat;
     state.entries[key].push(entry);
-    input.value = ''; selectedPresetId = null; resetCategoryPicker();
-    saveState(); render();
+    input.value = '';
+    selectedPresetId = null;
+    resetCategoryPicker();
+    saveState();
+    render();
   }
 
-  document.getElementById('amountInput').addEventListener('input', function() { document.getElementById('inputError').style.display = 'none'; });
+  document.getElementById('amountInput').addEventListener('input', function() {
+    document.getElementById('inputError').style.display = 'none';
+  });
   document.getElementById('addExpense').addEventListener('click', function() { addTxn('expense'); });
   document.getElementById('addIncome').addEventListener('click', function() { addTxn('income'); });
-  document.getElementById('dateInput').addEventListener('change', function() { selectedKey = this.value || null; render(); });
-  document.getElementById('dateToday').addEventListener('click', function() { selectedKey = null; render(); });
-  document.getElementById('settingsToggle').addEventListener('click', function() { document.getElementById('settingsPanel').classList.toggle('open'); });
-  document.getElementById('budgetCancel').addEventListener('click', function() { document.getElementById('settingsPanel').classList.remove('open'); render(); });
+
+  document.getElementById('dateInput').addEventListener('change', function() {
+    selectedKey = this.value || null;
+    render();
+  });
+  document.getElementById('dateToday').addEventListener('click', function() {
+    selectedKey = null;
+    render();
+  });
+
+  document.getElementById('settingsToggle').addEventListener('click', function() {
+    document.getElementById('settingsPanel').classList.toggle('open');
+  });
+  document.getElementById('budgetCancel').addEventListener('click', function() {
+    document.getElementById('settingsPanel').classList.remove('open');
+    render();
+  });
   document.getElementById('budgetSave').addEventListener('click', function() {
     var v = parseFloat(document.getElementById('budgetInput').value);
     if (v && v > 0) state.monthlyBudget = v;
@@ -1136,20 +1167,34 @@
       var t = todayParts();
       state.monthOverrides[monthKey(t.y, t.m)] = state.monthlyBudget - parseFloat(r) - sumNets(t.y, t.m, 1, t.d);
     }
-    saveState(); document.getElementById('settingsPanel').classList.remove('open'); render();
+    saveState();
+    document.getElementById('settingsPanel').classList.remove('open');
+    render();
   });
 
   document.getElementById('tabToday').addEventListener('click', function() { switchTab('today'); });
   document.getElementById('tabMonthly').addEventListener('click', function() { switchTab('monthly'); });
   document.getElementById('tabItems').addEventListener('click', function() { switchTab('items'); });
-  document.getElementById('prevMonth').addEventListener('click', function() { viewM -= 1; monthDayFilter = null; if (viewM < 1) { viewM = 12; viewY -= 1; } render(); });
-  document.getElementById('nextMonth').addEventListener('click', function() { viewM += 1; monthDayFilter = null; if (viewM > 12) { viewM = 1; viewY += 1; } render(); });
+  document.getElementById('prevMonth').addEventListener('click', function() {
+    viewM -= 1;
+    monthDayFilter = null;
+    if (viewM < 1) { viewM = 12; viewY -= 1; }
+    render();
+  });
+  document.getElementById('nextMonth').addEventListener('click', function() {
+    viewM += 1;
+    monthDayFilter = null;
+    if (viewM > 12) { viewM = 1; viewY += 1; }
+    render();
+  });
 
   document.querySelectorAll('#categoryPicker .cat-pill').forEach(function(btn) {
     var cat = btn.getAttribute('data-cat');
     btn.style.setProperty('--c', CAT_COLORS[cat]);
     btn.addEventListener('click', function() {
-      selectedCategory = cat; selectedPresetId = null; renderPresetChips();
+      selectedCategory = cat;
+      selectedPresetId = null;
+      renderPresetChips();
       document.querySelectorAll('#categoryPicker .cat-pill').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
       document.getElementById('customNameInput').style.display = cat === '기타' ? '' : 'none';
@@ -1160,33 +1205,54 @@
   document.querySelectorAll('#presetCatPicker .cat-pill').forEach(function(btn) {
     var cat = btn.getAttribute('data-cat');
     btn.style.setProperty('--c', CAT_COLORS[cat]);
-    btn.addEventListener('click', function() { presetCategory = (presetCategory === cat) ? '' : cat; renderItems(); });
+    btn.addEventListener('click', function() {
+      presetCategory = (presetCategory === cat) ? '' : cat;
+      renderItems();
+    });
   });
 
   document.getElementById('presetSave').addEventListener('click', function() {
     var name = document.getElementById('presetName').value.trim();
     var price = parseFloat(document.getElementById('presetPrice').value);
-    if (!name || !price || price <= 0) { document.getElementById('presetError').style.display = 'block'; return; }
+    if (!name || !price || price <= 0) {
+      document.getElementById('presetError').style.display = 'block';
+      return;
+    }
     var editing = editingPresetId ? findPreset(editingPresetId) : null;
     if (editing) {
-      editing.name = name; editing.price = price; editing.category = presetCategory;
+      editing.name = name;
+      editing.price = price;
+      editing.category = presetCategory;
     } else {
-      state.presets.push({ id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36), name: name, price: price, category: presetCategory });
+      state.presets.push({
+        id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36),
+        name: name, price: price, category: presetCategory
+      });
     }
-    clearPresetForm(); saveState(); render();
+    clearPresetForm();
+    saveState();
+    render();
   });
-  document.getElementById('presetCancel').addEventListener('click', function() { clearPresetForm(); render(); });
+  document.getElementById('presetCancel').addEventListener('click', function() {
+    clearPresetForm();
+    render();
+  });
 
   document.querySelectorAll('#editCatPicker .cat-pill').forEach(function(btn) {
     var cat = btn.getAttribute('data-cat');
     btn.style.setProperty('--c', CAT_COLORS[cat]);
-    btn.addEventListener('click', function() { editCatVal = (editCatVal === cat) ? '' : cat; refreshEditUI(); });
+    btn.addEventListener('click', function() {
+      editCatVal = (editCatVal === cat) ? '' : cat;
+      refreshEditUI();
+    });
   });
   document.getElementById('editTypeExpense').addEventListener('click', function() { editTypeVal = 'expense'; refreshEditUI(); });
   document.getElementById('editTypeIncome').addEventListener('click', function() { editTypeVal = 'income'; refreshEditUI(); });
   document.getElementById('editCancel').addEventListener('click', closeEdit);
   document.getElementById('editSave').addEventListener('click', saveEdit);
-  document.getElementById('editOverlay').addEventListener('click', function(ev) { if (ev.target === document.getElementById('editOverlay')) closeEdit(); });
+  document.getElementById('editOverlay').addEventListener('click', function(ev) {
+    if (ev.target === document.getElementById('editOverlay')) closeEdit();
+  });
 
   document.getElementById('recTypeExpense').addEventListener('click', function() { recTypeVal = 'expense'; renderRecurring(); });
   document.getElementById('recTypeIncome').addEventListener('click', function() { recTypeVal = 'income'; renderRecurring(); });
@@ -1195,23 +1261,234 @@
     var name = document.getElementById('recName').value.trim();
     var amount = parseFloat(document.getElementById('recAmount').value);
     var day = parseInt(document.getElementById('recDay').value, 10);
-    if (!name || !amount || amount <= 0 || !day || day < 1 || day > 31) { document.getElementById('recError').style.display = 'block'; return; }
+    if (!name || !amount || amount <= 0 || !day || day < 1 || day > 31) {
+      document.getElementById('recError').style.display = 'block';
+      return;
+    }
     var rule = editingRecId ? findRec(editingRecId) : null;
     if (rule) {
       rule.name = name; rule.amount = amount; rule.day = day; rule.type = recTypeVal;
     } else {
       var t = todayParts();
-      state.recurring.push({ id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36), name: name, amount: amount, type: recTypeVal, day: day, startDate: dateKey(t.y, t.m, t.d), generated: [] });
+      state.recurring.push({
+        id: 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36),
+        name: name, amount: amount, type: recTypeVal, day: day,
+        startDate: dateKey(t.y, t.m, t.d), generated: []
+      });
     }
-    clearRecForm(); saveState(); render();
+    clearRecForm();
+    saveState();
+    render();
+  });
+
+  // ---- 계정 동기화 표시 (안드로이드 앱에서만 보임)
+  function renderAccount() {
+    var row = document.getElementById('accountRow');
+    if (!hasBridge) { row.style.display = 'none'; return; }
+    row.style.display = '';
+    var link = document.getElementById('accountLink');
+    var status = document.getElementById('accountStatus');
+    if (!authInfo.available) {
+      link.textContent = '';
+      status.textContent = '클라우드 동기화 설정 전이에요 (지금은 이 폰에만 저장돼요)';
+      return;
+    }
+    if (authInfo.signedIn) {
+      link.textContent = '로그아웃';
+      status.textContent = authInfo.email + (syncText ? ' · ' + syncText : '');
+    } else {
+      link.textContent = 'Google 로그인';
+      status.textContent = syncText || '로그인하면 기록이 구글 계정에 저장되고, 다른 기기와도 맞춰져요';
+    }
+  }
+
+  window.onAuthChanged = function(json) {
+    try { authInfo = JSON.parse(json); } catch (e) {}
+    renderAccount();
+  };
+  window.onSyncStatus = function(text) { syncText = text; renderAccount(); };
+  window.onRemoteState = function(json) {
+    try { state = normalizeState(JSON.parse(json)); render(); } catch (e) {}
+  };
+  window.onBackPressedJs = function() {
+    if (document.getElementById('editOverlay').style.display === 'flex') { closeEdit(); return true; }
+    if (activeTab !== 'today') { switchTab('today'); return true; }
+    return false;
+  };
+
+  document.getElementById('accountToggle').addEventListener('click', function() {
+    if (!hasBridge || !authInfo.available) return;
+    if (authInfo.signedIn) window.AndroidBridge.signOut(); else window.AndroidBridge.signIn();
+  });
+  if (hasBridge) {
+    try { authInfo = JSON.parse(window.AndroidBridge.getAuthInfo()); } catch (e) {}
+  }
+  renderAccount();
+
+  // ---- 백업 / 복원
+  function setBackupMsg(text) { document.getElementById('backupMsg').textContent = text; }
+  document.getElementById('backupMake').addEventListener('click', function() {
+    var area = document.getElementById('backupArea');
+    area.value = JSON.stringify(state);
+    area.focus();
+    area.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    setBackupMsg(ok ? '복사했어요. 새 앱이나 다른 기기의 항목 탭에서 붙여넣고 복원하면 돼요.' : '위 코드를 길게 눌러 전체 복사해 주세요.');
+  });
+  document.getElementById('backupRestore').addEventListener('click', function() {
+    var area = document.getElementById('backupArea');
+    var parsed;
+    try {
+      parsed = JSON.parse(area.value.trim());
+      if (!parsed || typeof parsed !== 'object' || !parsed.entries || typeof parsed.entries !== 'object') throw new Error('bad');
+    } catch (e) {
+      setBackupMsg('코드가 올바르지 않아요. 백업 코드를 통째로 붙여넣어 주세요.');
+      return;
+    }
+    if (!restoreArmed) {
+      restoreArmed = true;
+      setBackupMsg('지금 기록이 모두 이 코드의 내용으로 바뀌어요. 괜찮으면 5초 안에 한 번 더 눌러 주세요.');
+      clearTimeout(restoreTimer);
+      restoreTimer = setTimeout(function() { restoreArmed = false; setBackupMsg(''); }, 5000);
+      return;
+    }
+    restoreArmed = false;
+    clearTimeout(restoreTimer);
+    state = normalizeState(parsed);
+    saveState();
+    area.value = '';
+    render();
+    setBackupMsg('복원했어요.');
   });
 
   var t0 = todayParts();
   viewY = t0.y; viewM = t0.m;
 
-  if (!auth) {
-    loadState().then(render);
+  loadState().then(render);
+  
+  // ================= 구글 로그인 =================
+  // (선택) 팝업 로그인이 계속 안 될 때만 채우세요. Google Cloud의 웹 클라이언트 ID.
+  var GOOGLE_WEB_CLIENT_ID = '';
+
+  var loginBtnEl = document.getElementById('loginBtn');
+  var userInfoEl = document.getElementById('userInfo');
+  var authMsgEl = document.getElementById('authMsg');
+
+  function showAuthMsg(text, isError) {
+    authMsgEl.textContent = text || '';
+    authMsgEl.className = 'auth-msg' + (isError ? ' err' : '');
+    authMsgEl.style.display = text ? 'block' : 'none';
   }
+
+  function isInAppBrowser() {
+    return /KAKAOTALK|NAVER\(inapp|FBAN|FBAV|Instagram|Line\/|DaumApps|; wv\)/i.test(navigator.userAgent);
+  }
+
+  function authErrorText(e) {
+    var c = (e && e.code) || '';
+    if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return '로그인 창이 닫혔어요. 다시 눌러 주세요.';
+    if (c === 'auth/popup-blocked') return '팝업이 차단됐어요. 브라우저 설정에서 이 사이트의 팝업을 허용해 주세요.';
+    if (c === 'auth/unauthorized-domain') return 'Firebase의 승인된 도메인에 ' + location.hostname + ' 을(를) 추가해야 해요.';
+    if (c === 'auth/network-request-failed') return '인터넷 연결을 확인해 주세요.';
+    return '로그인에 실패했어요 (' + (c || (e && e.message) || '알 수 없음') + ')';
+  }
+
+  function loadGsi() {
+    return new Promise(function(resolve, reject) {
+      if (window.google && window.google.accounts && window.google.accounts.id) { resolve(); return; }
+      var tag = document.createElement('script');
+      tag.src = 'https://accounts.google.com/gsi/client';
+      tag.async = true;
+      tag.onload = function() { resolve(); };
+      tag.onerror = function() { reject(new Error('gsi load failed')); };
+      document.head.appendChild(tag);
+    });
+  }
+
+  // 구글 공식 로그인 버튼 방식 (팝업/리다이렉트가 막히는 브라우저용)
+  async function startGoogleIdentity() {
+    try {
+      await loadGsi();
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_WEB_CLIENT_ID,
+        callback: async function(resp) {
+          try {
+            await signInWithCredential(auth, GoogleAuthProvider.credential(resp.credential));
+            document.getElementById('gisBox').style.display = 'none';
+            showAuthMsg('');
+          } catch (e) { showAuthMsg(authErrorText(e), true); }
+        }
+      });
+      document.getElementById('gisBox').style.display = 'block';
+      window.google.accounts.id.renderButton(document.getElementById('gisBtn'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'ko', width: 260 });
+      showAuthMsg('아래 Google 버튼을 눌러 로그인해 주세요.');
+    } catch (e) {
+      showAuthMsg('구글 로그인 스크립트를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.', true);
+    }
+  }
+
+  loginBtnEl.addEventListener('click', async function() {
+    if (!auth) { showAuthMsg('Firebase를 시작하지 못했어요. 새로고침 후 다시 시도해 주세요.', true); return; }
+
+    if (currentUser) {
+      if (!confirm('로그아웃할까요? 이 기기에 저장된 기록은 그대로 남아요.')) return;
+      try { await signOut(auth); showAuthMsg('로그아웃했어요.'); } catch (e) { showAuthMsg(authErrorText(e), true); }
+      return;
+    }
+
+    if (isInAppBrowser()) {
+      showAuthMsg('카카오톡·네이버 같은 앱 안의 화면에서는 구글 로그인이 막혀 있어요. 메뉴에서 "다른 브라우저로 열기"를 눌러 삼성 인터넷이나 크롬에서 열어 주세요.', true);
+      return;
+    }
+
+    showAuthMsg('로그인 중…');
+    if (GOOGLE_WEB_CLIENT_ID) { await startGoogleIdentity(); return; }
+
+    try {
+      await signInWithPopup(auth, provider);
+      showAuthMsg('');
+    } catch (e) {
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') {
+        try {
+          localStorage.setItem('login-redirect-pending', String(Date.now()));
+          await signInWithRedirect(auth, provider);
+        } catch (e2) { showAuthMsg(authErrorText(e2), true); }
+      } else {
+        showAuthMsg(authErrorText(e), true);
+      }
+    }
+  });
+
+  if (auth) {
+    // 리다이렉트 방식으로 돌아온 경우의 결과 확인 (실패하면 화면에 이유를 보여줌)
+    getRedirectResult(auth).then(function(res) {
+      var pending = localStorage.getItem('login-redirect-pending');
+      localStorage.removeItem('login-redirect-pending');
+      if (!res && pending && (Date.now() - Number(pending)) < 10 * 60 * 1000 && !auth.currentUser) {
+        showAuthMsg('로그인이 끝나지 않았어요. 이 브라우저는 로그인 정보를 넘겨주지 못하는 것 같아요. 크롬에서 열어 보거나 안내해 드린 대체 방법을 써 주세요.', true);
+      }
+    }).catch(function(e) { showAuthMsg(authErrorText(e), true); });
+
+    onAuthStateChanged(auth, async function(user) {
+      currentUser = user || null;
+      if (user) {
+        userInfoEl.textContent = (user.displayName || '사용자') + '님';
+        userInfoEl.style.display = 'inline';
+        loginBtnEl.textContent = '로그아웃';
+        loginBtnEl.classList.add('logged-in');
+        showAuthMsg('');
+      } else {
+        userInfoEl.style.display = 'none';
+        loginBtnEl.textContent = '구글 로그인';
+        loginBtnEl.classList.remove('logged-in');
+      }
+      await loadState();
+      render();
+    });
+  }
+
+})();
 </script>
 
 </body>

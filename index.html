@@ -352,20 +352,20 @@
   </div>
 </div>
 
-<!-- 스크립트 모듈로 변경 및 파이어베이스 연동 추가 -->
+<!-- 파이어베이스 연동 스크립트 -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // ⚠️ 주의: 실제 구글 로그인을 작동시키려면 아래 항목들을 본인의 Firebase 프로젝트 정보로 채워넣어야 합니다.
+  // 사용자의 Firebase 설정 정보 적용 완료
   const firebaseConfig = {
-    apiKey: "여기에_API_KEY_입력",
-    authDomain: "여기에_AUTH_DOMAIN_입력",
-    projectId: "여기에_PROJECT_ID_입력",
-    storageBucket: "여기에_STORAGE_BUCKET_입력",
-    messagingSenderId: "여기에_MESSAGING_SENDER_ID_입력",
-    appId: "여기에_APP_ID_입력"
+    apiKey: "AIzaSyCLI9oUAwVS7G-4axBBB_05WAQeuZjvNwM",
+    authDomain: "harubudget.firebaseapp.com",
+    projectId: "harubudget",
+    storageBucket: "harubudget.firebasestorage.app",
+    messagingSenderId: "161358275168",
+    appId: "1:161358275168:web:2fba7caa5fbcf8d648d905"
   };
 
   let app, auth, db, provider;
@@ -375,7 +375,7 @@
     db = getFirestore(app);
     provider = new GoogleAuthProvider();
   } catch(e) {
-    console.log("Firebase가 아직 올바르게 설정되지 않았습니다. 로컬 모드로 작동합니다.");
+    console.log("Firebase 로딩 실패");
   }
 
   let currentUser = null;
@@ -407,17 +407,17 @@
     try {
       let parsed = null;
       if (currentUser && db) {
-        // 로그인된 상태: 클라우드에서 가져오기
+        // 로그인 상태: 클라우드에서 가져오기
         const docSnap = await getDoc(doc(db, 'users', currentUser.uid));
         if (docSnap.exists()) {
           parsed = docSnap.data();
         } else {
-          // 클라우드가 비어있는데 스마트폰 기기에 기존 데이터가 있다면 클라우드로 병합(마이그레이션)
+          // 클라우드가 비어있다면 로컬에 있던 데이터 업로드
           let localRaw = localStorage.getItem('budget-state');
           if (localRaw) parsed = JSON.parse(localRaw);
         }
       } else {
-        // 비로그인 상태: 스마트폰 기기에서 가져오기
+        // 비로그인 상태: 로컬 저장소
         let raw = localStorage.getItem('budget-state');
         if (raw) parsed = JSON.parse(raw);
       }
@@ -430,20 +430,19 @@
       if (!Array.isArray(parsed.recurring)) parsed.recurring = [];
       state = parsed;
       
-      // 첫 로그인 시 로컬 데이터를 클라우드에 백업하기 위해 한번 저장
       if (currentUser && db) saveState(); 
     } catch (e) {
       state = defaultState();
     }
   }
 
-  // 상태 저장하기 (항상 기기에 저장하고, 로그인되어 있으면 클라우드에도 저장)
+  // 상태 저장하기
   async function saveState() {
     try {
       const stateStr = JSON.stringify(state);
-      localStorage.setItem('budget-state', stateStr); // 로컬 저장
+      localStorage.setItem('budget-state', stateStr); 
       if (currentUser && db) {
-        await setDoc(doc(db, 'users', currentUser.uid), state); // 클라우드 동기화
+        await setDoc(doc(db, 'users', currentUser.uid), state); 
       }
     } catch (e) { console.error("저장 에러", e); }
   }
@@ -451,7 +450,7 @@
   // 구글 로그인/로그아웃 버튼 클릭 이벤트
   document.getElementById('loginBtn').addEventListener('click', async () => {
     if (!auth) {
-      alert("Firebase 설정(firebaseConfig)을 먼저 입력해주세요!");
+      alert("Firebase 설정을 확인해주세요.");
       return;
     }
     if (currentUser) {
@@ -466,7 +465,7 @@
     }
   });
 
-  // 자동 로그인 감지 (한 번 로그인하면 어플을 다시 켜도 이 함수가 사용자 정보를 자동으로 잡아냅니다)
+  // 자동 로그인 감지
   if (auth) {
     onAuthStateChanged(auth, async (user) => {
       const userInfoEl = document.getElementById('userInfo');
@@ -1140,7 +1139,6 @@
   var t0 = todayParts();
   viewY = t0.y; viewM = t0.m;
 
-  // 파이어베이스 인증 리스너가 없는(안된) 상태 대비
   if (!auth) {
     loadState().then(render);
   }
@@ -1148,3 +1146,12 @@
 
 </body>
 </html>
+```
+
+### 📌 복사 후 진행할 일:
+1. **GitHub.com** 로그인 ➔ 레포지토리 이동 ➔ `index.html` 파일 클릭.
+2. 연필 모양 버튼(**Edit this file**)을 누르고 기존 내용을 지운 뒤 **위의 새 코드를 붙여넣기**합니다.
+3. 오른쪽 상단 파란색 **[Commit changes...]** 버튼을 누릅니다.
+4. 1~2분 뒤 스마트폰으로 본인의 깃허브 가계부 주소에 들어가서 구글 로그인을 테스트해 보세요! 
+
+테스트해 보시고 궁금한 점이 있으시면 언제든 편하게 말씀해 주세요!

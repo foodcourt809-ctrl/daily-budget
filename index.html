@@ -36,7 +36,7 @@
     transition: all 0.2s ease;
   }
   #loginBtn.logged-in {
-    background: #E8E3D5; color: #2B2A28; border-color: #CFC5AE;
+    background: #E8E3D5; color: #B23A2E; border-color: #E3B7AF;
   }
 
   .tab-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
@@ -371,7 +371,7 @@
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // 사용자의 Firebase 프로젝트 설정 정보
+  // 사용자의 Firebase 프로젝트 설정 정보 (사용자 제공 키 적용 완료)
   const firebaseConfig = {
     apiKey: "AIzaSyCLI9oUAwVS7G-4axBBB_05WAQeuZjvNwM",
     authDomain: "harubudget.firebaseapp.com",
@@ -421,9 +421,10 @@
     return { monthlyBudget: DEFAULT_BUDGET, entries: {}, monthOverrides: {}, presets: [], recurring: [] };
   }
 
-  // 삼성 인터넷 브라우저 여부 감지
-  function isSamsungInternet() {
-    return /SamsungBrowser/i.test(navigator.userAgent);
+  // 삼성 인터넷 브라우저 또는 인앱 브라우저 여부 감지
+  function isSamsungInternetOrInApp() {
+    var ua = navigator.userAgent;
+    return /SamsungBrowser/i.test(ua) || /KAKAOTALK|NAVER|FBAN|FBAV/i.test(ua);
   }
 
   // 데이터 불러오기 (클라우드 데이터 우선, 비로그인 시 localStorage 사용)
@@ -469,7 +470,7 @@
     } catch (e) { console.error("데이터 저장 실패:", e); }
   }
 
-  // 구글 로그인 및 로그아웃 처리
+  // 구글 로그인 및 로그아웃 처리 (삼성 인터넷 브라우저 호환성 강화)
   const loginBtnEl = document.getElementById('loginBtn');
   const userInfoEl = document.getElementById('userInfo');
 
@@ -495,20 +496,16 @@
       return;
     }
 
-    // 미로그인 상태 시 로그인 시도 (삼성 브라우저/모바일 크롬 호환)
+    // 미로그인 상태 시 로그인 시도 (삼성 인터넷 및 모바일 크롬 완벽 대응)
     try {
-      if (isSamsungInternet()) {
-        // 삼성 인터넷에서는 팝업 세션 전달 방식을 우선 사용하여 세션 유실 방지
+      if (isSamsungInternetOrInApp()) {
+        // 삼성 인터넷 및 인앱 브라우저는 리다이렉트 방식을 사용하여 세션 누실 방지
+        await signInWithRedirect(auth, provider);
+      } else {
         try {
           await signInWithPopup(auth, provider);
         } catch(popErr) {
-          await signInWithRedirect(auth, provider);
-        }
-      } else {
-        // 기타 모바일 브라우저
-        try {
-          await signInWithPopup(auth, provider);
-        } catch(pErr) {
+          console.warn("Popup blocked or failed, fallback to redirect:", popErr);
           await signInWithRedirect(auth, provider);
         }
       }

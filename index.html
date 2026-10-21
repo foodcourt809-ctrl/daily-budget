@@ -387,6 +387,7 @@
     auth = getAuth(app);
     db = getFirestore(app);
     provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     
     // 모바일 브라우저 환경에서 로그인 세션이 유지되도록 명시적 설정
     setPersistence(auth, browserLocalPersistence).catch((err) => {

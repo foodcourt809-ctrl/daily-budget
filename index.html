@@ -29,10 +29,14 @@
 
   /* 로그인 영역 스타일 */
   .auth-area { text-align: right; }
-  #userInfo { font-size: 13px; color: #2F6F4E; font-weight: 600; margin-right: 8px; display: none; }
+  #userInfo { font-size: 13px; color: #2F6F4E; font-weight: 600; margin-right: 6px; display: none; }
   #loginBtn { 
     font-size: 12px; padding: 6px 12px; border-radius: 8px; border: 1px solid #DCD4C2; 
     background: #fff; cursor: pointer; color: #4A473F; font-weight: 600; font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  #loginBtn.logged-in {
+    background: #E8E3D5; color: #2B2A28; border-color: #CFC5AE;
   }
 
   .tab-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
@@ -186,7 +190,7 @@
 <div class="wrap" id="app">
   <div class="top-row">
     <div class="app-title">하루가계부</div>
-    <!-- 로그인 상태 및 버튼 표시 영역 -->
+    <!-- 로그인/로그아웃 표시 영역 -->
     <div class="auth-area">
       <span id="userInfo"></span>
       <button id="loginBtn">구글 로그인</button>
@@ -352,13 +356,21 @@
   </div>
 </div>
 
-<!-- 파이어베이스 연동 스크립트 -->
+<!-- 파이어베이스 연동 스크립트 모듈 -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { 
+    getAuth, 
+    signInWithPopup, 
+    signInWithRedirect, 
+    getRedirectResult, 
+    GoogleAuthProvider, 
+    onAuthStateChanged, 
+    signOut 
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // 사용자의 Firebase 설정 정보 적용 완료
+  // 사용자 지정 Firebase 키 정보
   const firebaseConfig = {
     apiKey: "AIzaSyCLI9oUAwVS7G-4axBBB_05WAQeuZjvNwM",
     authDomain: "harubudget.firebaseapp.com",
@@ -375,7 +387,7 @@
     db = getFirestore(app);
     provider = new GoogleAuthProvider();
   } catch(e) {
-    console.log("Firebase 로딩 실패");
+    console.error("Firebase 초기화 실패:", e);
   }
 
   let currentUser = null;
@@ -402,22 +414,25 @@
     return { monthlyBudget: DEFAULT_BUDGET, entries: {}, monthOverrides: {}, presets: [], recurring: [] };
   }
 
-  // 상태 불러오기 (클라우드 우선, 없으면 기기 내부 저장소)
+  // 모바일 환경 체크 함수
+  function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+
+  // 데이터 불러오기 (클라우드 우선, 비로그인 시 localStroage)
   async function loadState() {
     try {
       let parsed = null;
       if (currentUser && db) {
-        // 로그인 상태: 클라우드에서 가져오기
         const docSnap = await getDoc(doc(db, 'users', currentUser.uid));
         if (docSnap.exists()) {
           parsed = docSnap.data();
         } else {
-          // 클라우드가 비어있다면 로컬에 있던 데이터 업로드
+          // 구글 로그인 성공 시 기존 기기 데이터가 있다면 클라우드로 업로드
           let localRaw = localStorage.getItem('budget-state');
           if (localRaw) parsed = JSON.parse(localRaw);
         }
       } else {
-        // 비로그인 상태: 로컬 저장소
         let raw = localStorage.getItem('budget-state');
         if (raw) parsed = JSON.parse(raw);
       }
@@ -436,7 +451,7 @@
     }
   }
 
-  // 상태 저장하기
+  // 데이터 저장하기
   async function saveState() {
     try {
       const stateStr = JSON.stringify(state);
@@ -444,41 +459,85 @@
       if (currentUser && db) {
         await setDoc(doc(db, 'users', currentUser.uid), state); 
       }
-    } catch (e) { console.error("저장 에러", e); }
+    } catch (e) { console.error("데이터 저장 실패:", e); }
   }
 
-  // 구글 로그인/로그아웃 버튼 클릭 이벤트
-  document.getElementById('loginBtn').addEventListener('click', async () => {
+  // 구글 로그인 / 로그아웃 버튼 이벤트
+  const loginBtnEl = document.getElementById('loginBtn');
+  const userInfoEl = document.getElementById('userInfo');
+
+  loginBtnEl.addEventListener('click', async () => {
     if (!auth) {
-      alert("Firebase 설정을 확인해주세요.");
+      alert("Firebase 설정을 다시 확인해주세요.");
       return;
     }
+    
+    // 이미 로그인되어 있으면 로그아웃 실행
     if (currentUser) {
-      await signOut(auth);
-    } else {
-      try {
-        await signInWithPopup(auth, provider);
-      } catch(error) {
-        console.error("로그인 에러:", error);
-        alert("로그인 중 오류가 발생했습니다.");
+      if (confirm("로그아웃 하시겠습니까?")) {
+        try {
+          await signOut(auth);
+          currentUser = null;
+          alert("로그아웃 되었습니다.");
+          await loadState();
+          render();
+        } catch(e) {
+          alert("로그아웃 실패: " + e.message);
+        }
+      }
+      return;
+    }
+
+    // 미로그인 상태 시 로그인 시도
+    try {
+      if (isMobile()) {
+        // 모바일 브라우저 환경에서는 팝업 차단 방지를 위해 redirect 방식 사용
+        await signInWithRedirect(auth, provider);
+      } else {
+        // PC 환경에서는 popup 사용, 실패 시 fallback
+        try {
+          await signInWithPopup(auth, provider);
+        } catch(popupErr) {
+          if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/popup-closed-by-user') {
+            await signInWithRedirect(auth, provider);
+          } else {
+            throw popupErr;
+          }
+        }
+      }
+    } catch(error) {
+      console.error("로그인 에러:", error);
+      if (error.code === 'auth/unauthorized-domain') {
+        alert("Firebase Auth '승인된 도메인' 설정에 현재 깃허브 주소가 추가되어 있는지 확인하세요.");
+      } else {
+        alert("로그인 중 오류가 발생했습니다: " + error.message);
       }
     }
   });
 
-  // 자동 로그인 감지
+  // 모바일 리다이렉트 로그인 결과 처리
   if (auth) {
+    getRedirectResult(auth).then((result) => {
+      if (result && result.user) {
+        console.log("리다이렉트 로그인 성공:", result.user);
+      }
+    }).catch((error) => {
+      console.error("리다이렉트 로그인 에러:", error);
+    });
+
+    // 자동 로그인 감지 및 유저 정보 업데이트
     onAuthStateChanged(auth, async (user) => {
-      const userInfoEl = document.getElementById('userInfo');
-      const loginBtnEl = document.getElementById('loginBtn');
       if (user) {
         currentUser = user;
         userInfoEl.textContent = (user.displayName || '사용자') + '님';
         userInfoEl.style.display = 'inline';
         loginBtnEl.textContent = '로그아웃';
+        loginBtnEl.classList.add('logged-in');
       } else {
         currentUser = null;
         userInfoEl.style.display = 'none';
         loginBtnEl.textContent = '구글 로그인';
+        loginBtnEl.classList.remove('logged-in');
       }
       await loadState();
       render();
@@ -1148,10 +1207,7 @@
 </html>
 ```
 
-### 📌 복사 후 진행할 일:
-1. **GitHub.com** 로그인 ➔ 레포지토리 이동 ➔ `index.html` 파일 클릭.
-2. 연필 모양 버튼(**Edit this file**)을 누르고 기존 내용을 지운 뒤 **위의 새 코드를 붙여넣기**합니다.
-3. 오른쪽 상단 파란색 **[Commit changes...]** 버튼을 누릅니다.
-4. 1~2분 뒤 스마트폰으로 본인의 깃허브 가계부 주소에 들어가서 구글 로그인을 테스트해 보세요! 
-
-테스트해 보시고 궁금한 점이 있으시면 언제든 편하게 말씀해 주세요!
+### 📌 적용 방법:
+1. GitHub 레포지토리의 `index.html` 연필 아이콘(**Edit this file**)을 누릅니다.
+2. 기존 코드를 전체 지우고 위의 **새 코드**를 그대로 복사하여 붙여넣습니다.
+3. **[Commit changes...]** 버튼을 누른 뒤 1~2분 후 폰에서 다시 구글 로그인을 시도해 보세요!
